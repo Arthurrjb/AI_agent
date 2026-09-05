@@ -5,6 +5,7 @@ import argparse
 from openai import OpenAI
 from prompts import system_prompt
 from call_function import available_functions, call_function
+import sys
 
 def main():
     load_dotenv()
@@ -27,32 +28,39 @@ def main():
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": args.user_prompt},
     ]
-    
-    response = client.chat.completions.create(
-        model="openrouter/free",
-        messages=messages,
-        tools=available_functions,
-    )
 
-    if response.usage is None:
-        raise RuntimeError("usage not found!!!")
+    for _ in range(20):
+        response = client.chat.completions.create(
+            model="openrouter/free",
+            messages=messages,
+            tools=available_functions,
+        )
 
-    message = response.choices[0].message
+        if response.usage is None:
+            raise RuntimeError("usage not found!!!")
+
+        message = response.choices[0].message
+        messages.append(message)
 
 
-    if message.tool_calls:
-        for tool_call in message.tool_calls:
-            result_message = call_function(tool_call, args.verbose)
-            if result_message["content"]:
-                if args.verbose:
-                    print(f"-> {result_message['content']}")
-            else:
-                raise Exception("dictionary empy/falzy")
-    else:
-        print(message.content)
-        
-            
-    
+        if message.tool_calls:
+            for tool_call in message.tool_calls:
+                result_message = call_function(tool_call, args.verbose)
+                messages.append(result_message)
+                if result_message["content"]:
+                    if args.verbose:
+                        print(f"-> {result_message['content']}")
+                elif result_message["content"] == "":
+                    print("-> No content")
+                else:
+                    raise Exception("Result message Empty/Falsy")
+        else:
+            print("Final response:")
+            print(message.content)
+            return
+
+    print("No final response. Maximun of iterations reached")
+    sys.exit(1)
 
 if __name__ == "__main__":
     main()
