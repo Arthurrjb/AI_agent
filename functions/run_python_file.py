@@ -2,7 +2,7 @@ import os
 import subprocess
 from openai import OpenAI
 
-tool_run_python_file = {
+schema_run_python_file = {
     "type": "function",
     "function": {
         "name": "run_python_file",
